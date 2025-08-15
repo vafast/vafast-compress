@@ -1,0 +1,76 @@
+{
+  "name": "@vafast/compress",
+  "description": "Vafast Compression that supports Brotli, GZIP, and Deflate compression",
+  "version": "0.0.1",
+  "author": {
+    "name": "Ashary Vermaysha",
+    "email": "vermaysha@gmail.com",
+    "url": "https://github.com/vermaysha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vermaysha/@vafast/compress.git"
+  },
+  "url": "https://github.com/vermaysha/@vafast/compress",
+  "bugs": "https://github.com/vermaysha/@vafast/compress/issues",
+  "homepage": "https://github.com/vermaysha/@vafast/compress",
+  "keywords": [
+    "vafast",
+    "compression",
+    "brotli",
+    "gzip",
+    "deflate"
+  ],
+  "license": "MIT",
+  "exports": {
+    "bun": "./dist/index.js",
+    "node": "./dist/cjs/index.js",
+    "require": "./dist/cjs/index.js",
+    "import": "./dist/index.js",
+    "default": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "prepare": "husky",
+    "format": "eslint --fix {./src/,./tests/}*.ts",
+    "lint": "eslint {./src/,./tests/}*.ts",
+    "build": "rimraf dist && tsc --project tsconfig.esm.json && tsc --project tsconfig.cjs.json",
+    "test": "bun test && npm run test:node",
+    "test:node": "npm install --prefix ./tests/node/cjs/ && npm install --prefix ./tests/node/esm/ && node ./tests/node/cjs/index.js && node ./tests/node/esm/index.js",
+    "release": "npm run build && npm run test && npm publish --access public"
+  },
+  "devDependencies": {
+    "@vafast/cors": "^1.3.3",
+    "@vafast/stream": "^1.1.0",
+    "@eslint/js": "^9.33.0",
+    "@types/bun": "latest",
+    "bun-types": "^1.2.20",
+    "tirne": "^1.3.9-beta.12",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^7.18.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.3",
+    "tirne": ">= 1.1.27"
+  },
+  "engines": {
+    "bun": ">=1.1.8",
+    "node": ">=18.20.8"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write",
+    "*.ts": "eslint --fix"
+  },
+  "files": [
+    "dist"
+  ]
+}
