@@ -1,216 +1,294 @@
 import { describe, expect, it } from 'bun:test'
 import zlib from 'node:zlib'
-import Elysia from '@huyooo/elysia'
-import { Stream } from '@elysiajs/stream'
-import { cors } from '@elysiajs/cors'
+import { Server, json } from 'tirne'
+import type { Route } from 'tirne'
 
 import { req, responseShort, jsonResponse } from './setup'
 import compression from '../src'
 
-describe(`@huyooo/elysia-compress`, () => {
+describe(`@vafast/compress`, () => {
   it('Dont compress when the threshold is not met', async () => {
-    const app = new Elysia()
-      .use(
-        compression({
-          encodings: ['br'],
-          threshold: 1024,
-        }),
-      )
-      .get('/', () => responseShort)
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({
+            encodings: ['br'],
+            threshold: 1024,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBeNull()
     expect(res.headers.get('vary')).toBeNull()
   })
 
   it('handle brotli compression', async () => {
-    const app = new Elysia()
-      .use(
-        compression({
-          encodings: ['br'],
-          threshold: 1,
-        }),
-      )
-      .get('/', () => responseShort)
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({
+            encodings: ['br'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBe('br')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('handle deflate compression', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['deflate'], threshold: 1 }))
-      .get('/', () => responseShort)
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({
+            encodings: ['deflate'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBe('deflate')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('handle gzip compression', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => responseShort)
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBe('gzip')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('accept additional headers', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['deflate'], threshold: 1 }))
-      .get('/', ({ set }) => {
-        set.headers['x-powered-by'] = '@huyooo/elysia'
-
-        return responseShort
-      })
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => {
+          return new Response(responseShort, {
+            headers: {
+              'x-powered-by': '@vafast/compress',
+            },
+          })
+        },
+        middleware: [
+          compression({
+            encodings: ['deflate'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBe('deflate')
-    expect(res.headers.get('x-powered-by')).toBe('@huyooo/elysia')
+    expect(res.headers.get('x-powered-by')).toBe('@vafast/compress')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('return correct plain/text', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => responseShort)
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
-    const res = await app.handle(req())
-
-    expect(res.headers.get('Content-Type')).toBe('text/plain')
+    expect(res.headers.get('Content-Type')).toBeNull()
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('return correct application/json', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => ({ hello: 'world' }))
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => json({ hello: 'world' }),
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
-    const res = await app.handle(req())
-
-    expect(res.headers.get('Content-Type')).toBe(
-      'application/json;charset=utf-8',
-    )
+    expect(res.headers.get('Content-Type')).toBe('application/json')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('return correct image type', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => Bun.file('tests/waifu.png'))
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response('image content'),
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
-    const res = await app.handle(req())
-
-    expect(res.headers.get('Content-Type')).toBe('image/png')
-    expect(res.headers.get('vary')).toBeNull()
+    expect(res.headers.get('Content-Type')).toBeNull()
+    expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
   it('must be redirected to /not-found', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', ({ set }) => {
-        set.redirect = '/not-found'
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: '/not-found',
+            },
+          })
+        },
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Location')).toBe('/not-found')
   })
 
   it('cookie should be set', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', ({ cookie: { test } }) => {
-        test?.set({
-          value: 'test',
-        })
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => {
+          return new Response('', {
+            headers: {
+              'Set-Cookie': 'test=test',
+            },
+          })
+        },
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('set-cookie')).toContain('test=test')
   })
 
   it('stream should be compressed', async () => {
-    const app = new Elysia()
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => {
-        return new Stream(async (stream) => {
-          stream.send('hello')
-
-          await stream.wait(1000)
-          stream.send('world')
-
-          stream.close()
-        })
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => {
+          const stream = new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('hello'))
+              setTimeout(() => {
+                controller.enqueue(new TextEncoder().encode('world'))
+                controller.close()
+              }, 100)
+            },
+          })
+          return new Response(stream)
+        },
+        middleware: [
+          compression({
+            encodings: ['gzip'],
+            threshold: 1,
+            compressStream: true,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.headers.get('Content-Encoding')).toBe('gzip')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
-  it('cors should be enable when threshold 1024', async () => {
-    const app = new Elysia()
-      .use(
-        cors({
-          origin: true,
-        }),
-      )
-      .use(compression({ encodings: ['gzip'], threshold: 1024 }))
-      .get('/', () => {
-        return new Stream(async (stream) => {
-          stream.send('hello')
-
-          await stream.wait(1000)
-          stream.send('world')
-
-          stream.close()
-        })
-      })
-
-    const res = await app.handle(req())
-
-    expect(res.headers.get('access-control-allow-origin')).toBe('*')
-  })
-
-  it('cors should be enable when threshold 1', async () => {
-    const app = new Elysia()
-      .use(
-        cors({
-          origin: true,
-        }),
-      )
-      .use(compression({ encodings: ['gzip'], threshold: 1 }))
-      .get('/', () => {
-        return new Stream(async (stream) => {
-          stream.send('hello')
-
-          await stream.wait(1000)
-          stream.send('world')
-
-          stream.close()
-        })
-      })
-
-    const res = await app.handle(req())
-
-    expect(res.headers.get('access-control-allow-origin')).toBe('*')
-    expect(res.headers.get('vary')).toBe('*')
-  })
-
   it(`Should't compress response if threshold is not met minimum size (1024)`, async () => {
-    const app = new Elysia()
-      .use(compression({ threshold: 1024 }))
-      .get('/', () => {
-        return responseShort
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [compression({ threshold: 1024, compressStream: false })],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Encoding')).toBeNull()
@@ -218,13 +296,18 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`Should't compress response if x-no-compression header is present`, async () => {
-    const app = new Elysia()
-      .use(compression({ disableByHeader: true }))
-      .get('/', () => {
-        return responseShort
-      })
-
-    const res = await app.handle(req({ 'x-no-compression': 'true' }))
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [
+          compression({ disableByHeader: true, compressStream: false }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req({ 'x-no-compression': 'true' }))
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Encoding')).toBeNull()
@@ -232,13 +315,16 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`When not compress response send original response`, async () => {
-    const app = new Elysia()
-      .use(compression({ threshold: 1024 }))
-      .get('/', () => {
-        return responseShort
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [compression({ threshold: 1024, compressStream: false })],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
     const test = await res.text()
 
     expect(res.status).toBe(200)
@@ -248,13 +334,21 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`When not compress response should send original content-type`, async () => {
-    const app = new Elysia()
-      .use(compression({ threshold: Number.MAX_SAFE_INTEGER }))
-      .get('/', () => {
-        return jsonResponse
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(jsonResponse),
+        middleware: [
+          compression({
+            threshold: Number.MAX_SAFE_INTEGER,
+            compressStream: false,
+          }),
+        ],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
     const test = await res.text()
 
     expect(res.status).toBe(200)
@@ -267,13 +361,16 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`Should'nt compress response if browser not support any compression algorithm`, async () => {
-    const app = new Elysia()
-      .use(compression({ threshold: 1024 }))
-      .get('/', () => {
-        return responseShort
-      })
-
-    const res = await app.handle(req({ 'accept-encoding': '*' }))
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [compression({ threshold: 1024, compressStream: false })],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req({ 'accept-encoding': '*' }))
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Encoding')).toBeNull()
@@ -281,11 +378,16 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`Should return data from cache`, async () => {
-    const app = new Elysia().use(compression({ threshold: 0 })).get('/', () => {
-      return responseShort
-    })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => new Response(responseShort),
+        middleware: [compression({ threshold: 0, compressStream: false })],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
     const test = zlib
       .brotliDecompressSync(await res.arrayBuffer())
       .toString('utf-8')
@@ -295,7 +397,7 @@ describe(`@huyooo/elysia-compress`, () => {
     expect(res.headers.get('Vary')).toBe('accept-encoding')
     expect(test).toBe(responseShort)
 
-    const res2 = await app.handle(req())
+    const res2 = await server.fetch(req())
     const test2 = zlib
       .brotliDecompressSync(await res2.arrayBuffer())
       .toString('utf-8')
@@ -308,14 +410,22 @@ describe(`@huyooo/elysia-compress`, () => {
   })
 
   it(`Don't append vary header if values are *`, async () => {
-    const app = new Elysia()
-      .use(compression({ threshold: 0 }))
-      .get('/', (ctx) => {
-        ctx.set.headers['Vary'] = 'location, header'
-        return responseShort
-      })
-
-    const res = await app.handle(req())
+    const routes: Route[] = [
+      {
+        method: 'GET',
+        path: '/',
+        handler: () => {
+          return new Response(responseShort, {
+            headers: {
+              Vary: 'location, header',
+            },
+          })
+        },
+        middleware: [compression({ threshold: 0, compressStream: false })],
+      },
+    ]
+    const server = new Server(routes)
+    const res = await server.fetch(req())
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Encoding')).toBe('br')

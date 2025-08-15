@@ -1,4 +1,4 @@
-import type { LifeCycleType } from '@huyooo/elysia'
+import type { Middleware } from 'tirne'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 export type CompressionEncoding = 'br' | 'deflate' | 'gzip'
 
@@ -57,23 +57,16 @@ export type CompressionOptions = {
    * Defaults to `false`
    * @default false
    */
-  compressStream: boolean
+  compressStream?: boolean
 }
 
 export type LifeCycleOptions = {
   /**
-   * By default, hook and schema is scope to current instance only not global.
-   * Hook type is to specify the scope of hook whether is should be encapsulated or global.
+   * Middleware execution order and scope.
    *
-   * Elysia hook type are as the following:
-   * local - apply to only current instance and descendant only
-   * scoped - apply to parent, current instance and descendants
-   * global - apply to all instance that apply the plugin (all parents, current, and descendants)
-   *
-   * @default 'scoped'
-   * @see https://elysiajs.com/essential/scope.html#hook-type
+   * @default 'after'
    */
-  as?: LifeCycleType
+  as?: 'before' | 'after'
 }
 
 export type CacheOptions = {

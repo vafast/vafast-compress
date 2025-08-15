@@ -1,4 +1,5 @@
-import { Elysia, mapResponse } from '@huyooo/elysia'
+import { Server, json } from 'tirne'
+import type { Middleware } from 'tirne'
 import type {
   CacheOptions,
   CompressionEncoding,
@@ -27,14 +28,14 @@ import cacheStore from './cache'
  * @param {boolean} [options.compressionOptions.disableByHeader] - Disable compression by header. Defaults to false.
  * @param {BrotliOptions} [options.compressionOptions.brotliOptions] - Brotli compression options.
  * @param {ZlibOptions} [options.compressionOptions.zlibOptions] - Zlib compression options.
- * @param {LifeCycleType} [options.lifeCycleOptions.as] - The life cycle type. Defaults to 'scoped'.
+ * @param {string} [options.lifeCycleOptions.as] - The middleware execution order. Defaults to 'after'.
  * @param {number} [options.compressionOptions.threshold] - The minimum byte size for a response to be compressed. Defaults to 1024.
  * @param {number} [options.cacheOptions.TTL] - The time-to-live for the cache. Defaults to 24 hours.
- * @returns {Elysia} - The Elysia app with compression middleware.
+ * @returns {Middleware} - The Tirne compression middleware.
  */
 export const compression = (
   options?: CompressionOptions & LifeCycleOptions & CacheOptions,
-) => {
+): Middleware => {
   const zlibOptions: ZlibOptions = {
     ...{
       level: 6,
@@ -53,15 +54,11 @@ export const compression = (
   const defaultEncodings = options?.encodings ?? ['br', 'gzip', 'deflate']
   const defaultCompressibleTypes =
     /^text\/(?!event-stream)|(?:\+|\/)json(?:;|$)|(?:\+|\/)text(?:;|$)|(?:\+|\/)xml(?:;|$)|octet-stream(?:;|$)/u
-  const lifeCycleType = options?.as ?? 'global'
+  const lifeCycleType = options?.as ?? 'after'
   const threshold = options?.threshold ?? 1024
   const cacheTTL = options?.TTL ?? 24 * 60 * 60 // 24 hours
   const disableByHeader = options?.disableByHeader ?? true
   const compressStream = options?.compressStream ?? true
-  const app = new Elysia({
-    name: '@huyooo/elysia-compress',
-    seed: options,
-  })
 
   const compressors = {
     br: (buffer: ArrayBuffer) => brotliCompressSync(buffer, brotliOptions),
@@ -98,56 +95,60 @@ export const compression = (
    * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
    * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
    */
-  app.mapResponse({ as: lifeCycleType }, async (ctx) => {
+  return async (
+    req: Request,
+    next: () => Promise<Response>,
+  ): Promise<Response> => {
     // Disable compression when `x-no-compression` header is set
-    if (disableByHeader && ctx.headers['x-no-compression']) {
-      return
+    if (disableByHeader && req.headers.get('x-no-compression')) {
+      return next()
     }
 
-    const { set } = ctx
-    const response = ctx.response as any
+    const response = await next()
+
+    // Don't compress if response is not ok
+    if (!response.ok) {
+      return response
+    }
 
     const acceptEncodings: string[] =
-      ctx.headers['accept-encoding']?.split(', ') ?? []
+      req.headers.get('accept-encoding')?.split(', ') ?? []
     const encodings: string[] = defaultEncodings.filter((encoding) =>
       acceptEncodings.includes(encoding),
     )
 
-    if (encodings.length < 1 && !encodings[0]) {
-      return
+    if (encodings.length < 1) {
+      return response
     }
 
     const encoding = encodings[0] as CompressionEncoding
     let compressed: Buffer | ReadableStream<Uint8Array>
-    let contentType =
-      set.headers['Content-Type'] ?? set.headers['content-type'] ?? ''
+    const contentType = response.headers.get('Content-Type') ?? ''
 
     /**
      * Compress ReadableStream Object if stream exists (SSE)
      *
      * @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
      */
-    if (compressStream && response?.stream instanceof ReadableStream) {
-      const stream = response.stream as ReadableStream
+    if (compressStream && response.body instanceof ReadableStream) {
+      const stream = response.body as ReadableStream
       compressed = stream.pipeThrough(CompressionStream(encoding, options))
     } else {
-      const res = mapResponse(response, {
-        headers: {},
-      })
-      const resContentType = res.headers.get('Content-Type')
+      // Clone the response to avoid consuming the body
+      const clonedResponse = response.clone()
+      const buffer = (await clonedResponse.arrayBuffer()) as ArrayBuffer
 
-      contentType = resContentType ? resContentType : 'text/plain'
-
-      const buffer = await res.arrayBuffer()
       // Disable compression when buffer size is less than threshold
       if (buffer.byteLength < threshold) {
-        return
+        return response
       }
 
       // Disable compression when Content-Type is not compressible
-      const isCompressible = defaultCompressibleTypes.test(contentType)
+      // If no Content-Type, assume it's compressible (text/plain)
+      const isCompressible =
+        !contentType || defaultCompressibleTypes.test(contentType)
       if (!isCompressible) {
-        return
+        return response
       }
 
       compressed = getOrCompress(encoding, buffer) // Will try cache first
@@ -162,11 +163,13 @@ export const compression = (
      *
      * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary
      */
-    const vary = set.headers.Vary ?? set.headers.vary
+    const headers = new Headers(response.headers)
+    const vary = headers.get('Vary')
+
     if (vary) {
       const rawHeaderValue = vary
         ?.split(',')
-        .map((v: any) => v.trim().toLowerCase())
+        .map((v: string) => v.trim().toLowerCase())
 
       const headerValueArray = Array.isArray(rawHeaderValue)
         ? rawHeaderValue
@@ -175,21 +178,24 @@ export const compression = (
       // Add accept-encoding header if it doesn't exist
       // and if vary not set to *
       if (!headerValueArray.includes('*')) {
-        set.headers.Vary = headerValueArray
-          .concat('accept-encoding')
-          .filter((value, index, array) => array.indexOf(value) === index)
-          .join(', ')
+        headers.set(
+          'Vary',
+          headerValueArray
+            .concat('accept-encoding')
+            .filter((value, index, array) => array.indexOf(value) === index)
+            .join(', '),
+        )
       }
     } else {
-      set.headers.Vary = 'accept-encoding'
+      headers.set('Vary', 'accept-encoding')
     }
-    set.headers['Content-Encoding'] = encoding
+
+    headers.set('Content-Encoding', encoding)
 
     return new Response(compressed, {
-      headers: {
-        'Content-Type': contentType,
-      },
+      status: response.status,
+      statusText: response.statusText,
+      headers,
     })
-  })
-  return app
+  }
 }
