@@ -3,7 +3,7 @@ if ('Bun' in globalThis) {
   throw new Error('❌ Use Node.js to run this test!')
 }
 
-const { compression } = require('@huyooo/elysia-compress')
+const { compression } = require('@vafast/compress')
 
 if (typeof compression !== 'function') {
   throw new Error('❌ CommonJS Node.js failed')

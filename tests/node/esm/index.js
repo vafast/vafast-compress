@@ -3,7 +3,7 @@ if ('Bun' in globalThis) {
   throw new Error('❌ Use Node.js to run this test!')
 }
 
-import { compression } from '@huyooo/elysia-compress'
+import { compression } from '@vafast/compress'
 
 if (typeof compression !== 'function') {
   throw new Error('❌ ESM Node.js failed')
