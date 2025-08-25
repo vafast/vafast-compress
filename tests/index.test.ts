@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import zlib from 'node:zlib'
-import { Server, json } from 'tirne'
-import type { Route } from 'tirne'
+import { Server, createRouteHandler } from 'vafast'
+import type { Route } from 'vafast'
 
 import { req, responseShort, jsonResponse } from './setup'
 import compression from '../src'
@@ -12,7 +12,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [
           compression({
             encodings: ['br'],
@@ -34,7 +36,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [
           compression({
             encodings: ['br'],
@@ -56,7 +60,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [
           compression({
             encodings: ['deflate'],
@@ -78,7 +84,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -100,13 +108,14 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => {
-          return new Response(responseShort, {
+        handler: createRouteHandler(() => {
+          return {
+            data: responseShort,
             headers: {
               'x-powered-by': '@vafast/compress',
             },
-          })
-        },
+          }
+        }),
         middleware: [
           compression({
             encodings: ['deflate'],
@@ -129,7 +138,14 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return {
+            data: responseShort,
+            headers: {
+              'Content-Type': '',
+            },
+          }
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -142,7 +158,7 @@ describe(`@vafast/compress`, () => {
     const server = new Server(routes)
     const res = await server.fetch(req())
 
-    expect(res.headers.get('Content-Type')).toBeNull()
+    expect(res.headers.get('Content-Type')).toBe('')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
@@ -151,7 +167,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => json({ hello: 'world' }),
+        handler: createRouteHandler(() => {
+          return { hello: 'world' }
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -173,7 +191,14 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response('image content'),
+        handler: createRouteHandler(() => {
+          return {
+            data: 'image content',
+            headers: {
+              'Content-Type': '',
+            },
+          }
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -186,7 +211,7 @@ describe(`@vafast/compress`, () => {
     const server = new Server(routes)
     const res = await server.fetch(req())
 
-    expect(res.headers.get('Content-Type')).toBeNull()
+    expect(res.headers.get('Content-Type')).toBe('')
     expect(res.headers.get('vary')).toBe('accept-encoding')
   })
 
@@ -195,14 +220,15 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => {
-          return new Response(null, {
+        handler: createRouteHandler(() => {
+          return {
+            data: '',
             status: 302,
             headers: {
               Location: '/not-found',
             },
-          })
-        },
+          }
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -223,13 +249,14 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => {
-          return new Response('', {
+        handler: createRouteHandler(() => {
+          return {
+            data: '',
             headers: {
               'Set-Cookie': 'test=test',
             },
-          })
-        },
+          }
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -250,7 +277,7 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => {
+        handler: createRouteHandler(() => {
           const stream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode('hello'))
@@ -260,8 +287,8 @@ describe(`@vafast/compress`, () => {
               }, 100)
             },
           })
-          return new Response(stream)
-        },
+          return stream
+        }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -283,7 +310,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [compression({ threshold: 1024, compressStream: false })],
       },
     ]
@@ -300,7 +329,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [
           compression({ disableByHeader: true, compressStream: false }),
         ],
@@ -319,7 +350,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [compression({ threshold: 1024, compressStream: false })],
       },
     ]
@@ -338,7 +371,15 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(jsonResponse),
+        handler: createRouteHandler(async () => {
+          const content = await jsonResponse.text()
+          return {
+            data: content,
+            headers: {
+              'Content-Type': 'application/json;charset=utf-8',
+            },
+          }
+        }),
         middleware: [
           compression({
             threshold: Number.MAX_SAFE_INTEGER,
@@ -365,7 +406,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [compression({ threshold: 1024, compressStream: false })],
       },
     ]
@@ -382,7 +425,9 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => new Response(responseShort),
+        handler: createRouteHandler(() => {
+          return responseShort
+        }),
         middleware: [compression({ threshold: 0, compressStream: false })],
       },
     ]
@@ -414,13 +459,14 @@ describe(`@vafast/compress`, () => {
       {
         method: 'GET',
         path: '/',
-        handler: () => {
-          return new Response(responseShort, {
+        handler: createRouteHandler(() => {
+          return {
+            data: responseShort,
             headers: {
               Vary: 'location, header',
             },
-          })
-        },
+          }
+        }),
         middleware: [compression({ threshold: 0, compressStream: false })],
       },
     ]

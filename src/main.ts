@@ -1,5 +1,4 @@
-import { Server, json } from 'tirne'
-import type { Middleware } from 'tirne'
+import type { Middleware } from 'vafast'
 import type {
   CacheOptions,
   CompressionEncoding,

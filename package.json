@@ -70,6 +70,6 @@
   "types": "./dist/index.d.ts",
   "url": "https://github.com/vermaysha/@vafast/compress",
   "dependencies": {
-    "tirne": "^0.1.16"
+    "vafast": "^0.1.12"
   }
 }
