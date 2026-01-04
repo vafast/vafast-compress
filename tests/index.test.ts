@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import zlib from 'node:zlib'
 import { Server, createRouteHandler } from 'vafast'
 import type { Route } from 'vafast'

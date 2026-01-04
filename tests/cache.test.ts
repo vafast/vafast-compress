@@ -1,6 +1,6 @@
-import { describe, expect } from 'bun:test'
+import { describe, expect } from 'vitest'
 import cache from '../src/cache'
-import { it } from 'bun:test'
+import { it } from 'vitest'
 
 describe('MemCache', () => {
   it('should set and get a value', () => {
