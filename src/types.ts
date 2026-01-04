@@ -1,4 +1,4 @@
-import type { Middleware } from 'tirne'
+import type { Middleware } from 'vafast'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 export type CompressionEncoding = 'br' | 'deflate' | 'gzip'
 
