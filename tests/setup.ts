@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 export const req = (headers: { [key: string]: string } = {}) =>
   new Request('http://localhost/', {
     headers: {
@@ -14,4 +17,4 @@ Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deseru
 
 export const responseLong = responseShort.repeat(100)
 
-export const jsonResponse = Bun.file('./tests/data.json')
+export const jsonResponse = readFileSync(resolve(__dirname, 'data.json'), 'utf-8')

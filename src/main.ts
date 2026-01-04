@@ -13,6 +13,7 @@ import {
   gzipSync,
   deflateSync,
 } from 'node:zlib'
+import { createHash } from 'node:crypto'
 import { CompressionStream } from './compression-stream'
 import cacheStore from './cache'
 
@@ -77,7 +78,7 @@ export const compression = (
     algorithm: CompressionEncoding,
     buffer: ArrayBuffer,
   ): Buffer => {
-    const cacheKey = Bun.hash(`${algorithm}:${textDecoder.decode(buffer)}}`)
+    const cacheKey = createHash('md5').update(`${algorithm}:${textDecoder.decode(buffer)}`).digest('hex')
     if (cacheStore.has(cacheKey)) {
       return cacheStore.get(cacheKey)
     }
@@ -191,7 +192,12 @@ export const compression = (
 
     headers.set('Content-Encoding', encoding)
 
-    return new Response(compressed, {
+    // 将 Buffer 转换为 Uint8Array 以兼容 Response body
+    const body = compressed instanceof ReadableStream
+      ? compressed
+      : new Uint8Array(compressed)
+
+    return new Response(body, {
       status: response.status,
       statusText: response.statusText,
       headers,
