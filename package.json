@@ -59,13 +59,10 @@
     "*.ts": "eslint --fix"
   },
   "scripts": {
-    "prepare": "husky",
-    "format": "eslint --fix {./src/,./tests/}*.ts",
-    "lint": "eslint {./src/,./tests/}*.ts",
     "build": "rimraf dist && tsc --project tsconfig.esm.json && tsc --project tsconfig.cjs.json",
-    "test": "bun test && npm run test:node",
-    "test:node": "npm install --prefix ./tests/node/cjs/ && npm install --prefix ./tests/node/esm/ && node ./tests/node/cjs/index.js && node ./tests/node/esm/index.js",
-    "release": "npm run build && npm run test && npm publish --access public"
+    "dev": "npx tsx watch src/index.ts",
+    "test": "npx vitest run",
+    "release": "npx np"
   },
   "types": "./dist/index.d.ts",
   "url": "https://github.com/vermaysha/@vafast/compress",
