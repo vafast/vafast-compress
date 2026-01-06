@@ -54,6 +54,6 @@
   "types": "./dist/index.d.ts",
   "url": "https://github.com/vermaysha/@vafast/compress",
   "dependencies": {
-    "vafast": "^0.3.10"
+    "vafast": "^0.3.0"
   }
 }
