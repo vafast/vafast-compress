@@ -13,7 +13,7 @@ Add compression to [Elysia Server](https://elysiajs.com/essential/handler.html#r
 ## Install
 
 ```
-bun add @huyooo/elysia-compress
+npm install @huyooo/elysia-compress
 ```
 
 ## Usage
