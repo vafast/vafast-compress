@@ -1,6 +1,6 @@
 {
   "name": "@vafast/compress",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": {
     "name": "Ashary Vermaysha",
     "email": "vermaysha@gmail.com",
@@ -54,6 +54,6 @@
   "types": "./dist/index.d.ts",
   "url": "https://github.com/vermaysha/@vafast/compress",
   "dependencies": {
-    "vafast": ">=0.3.11"
+    "vafast": "^0.5.1"
   }
 }

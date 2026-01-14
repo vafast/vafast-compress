@@ -1,20 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import zlib from 'node:zlib'
-import { Server, createHandler } from 'vafast'
-import type { Route } from 'vafast'
+import { Server, defineRoute, defineRoutes } from 'vafast'
 
 import { req, responseShort, jsonResponse } from './setup'
 import compression from '../src'
 
 describe(`@vafast/compress`, () => {
   it('Dont compress when the threshold is not met', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [
           compression({
             encodings: ['br'],
@@ -22,8 +19,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -32,13 +29,11 @@ describe(`@vafast/compress`, () => {
   })
 
   it('handle brotli compression', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [
           compression({
             encodings: ['br'],
@@ -46,8 +41,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -56,13 +51,11 @@ describe(`@vafast/compress`, () => {
   })
 
   it('handle deflate compression', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [
           compression({
             encodings: ['deflate'],
@@ -70,8 +63,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -80,13 +73,11 @@ describe(`@vafast/compress`, () => {
   })
 
   it('handle gzip compression', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -94,8 +85,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -104,17 +95,15 @@ describe(`@vafast/compress`, () => {
   })
 
   it('accept additional headers', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: responseShort,
-            headers: {
-              'x-powered-by': '@vafast/compress',
-            },
-          }
+        handler: () => ({
+          data: responseShort,
+          headers: {
+            'x-powered-by': '@vafast/compress',
+          },
         }),
         middleware: [
           compression({
@@ -123,8 +112,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -134,17 +123,15 @@ describe(`@vafast/compress`, () => {
   })
 
   it('return correct plain/text', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: responseShort,
-            headers: {
-              'Content-Type': '',
-            },
-          }
+        handler: () => ({
+          data: responseShort,
+          headers: {
+            'Content-Type': '',
+          },
         }),
         middleware: [
           compression({
@@ -153,8 +140,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -163,13 +150,11 @@ describe(`@vafast/compress`, () => {
   })
 
   it('return correct application/json', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return { hello: 'world' }
-        }),
+        handler: () => ({ hello: 'world' }),
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -177,8 +162,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -187,17 +172,15 @@ describe(`@vafast/compress`, () => {
   })
 
   it('return correct image type', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: 'image content',
-            headers: {
-              'Content-Type': '',
-            },
-          }
+        handler: () => ({
+          data: 'image content',
+          headers: {
+            'Content-Type': '',
+          },
         }),
         middleware: [
           compression({
@@ -206,8 +189,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -216,18 +199,16 @@ describe(`@vafast/compress`, () => {
   })
 
   it('must be redirected to /not-found', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: '',
-            status: 302,
-            headers: {
-              Location: '/not-found',
-            },
-          }
+        handler: () => ({
+          data: '',
+          status: 302,
+          headers: {
+            Location: '/not-found',
+          },
         }),
         middleware: [
           compression({
@@ -236,8 +217,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -245,17 +226,15 @@ describe(`@vafast/compress`, () => {
   })
 
   it('cookie should be set', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: '',
-            headers: {
-              'Set-Cookie': 'test=test',
-            },
-          }
+        handler: () => ({
+          data: '',
+          headers: {
+            'Set-Cookie': 'test=test',
+          },
         }),
         middleware: [
           compression({
@@ -264,8 +243,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -273,11 +252,11 @@ describe(`@vafast/compress`, () => {
   })
 
   it('stream should be compressed', async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
+        handler: () => {
           const stream = new ReadableStream({
             start(controller) {
               controller.enqueue(new TextEncoder().encode('hello'))
@@ -288,7 +267,7 @@ describe(`@vafast/compress`, () => {
             },
           })
           return stream
-        }),
+        },
         middleware: [
           compression({
             encodings: ['gzip'],
@@ -296,8 +275,8 @@ describe(`@vafast/compress`, () => {
             compressStream: true,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -306,16 +285,14 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`Should't compress response if threshold is not met minimum size (1024)`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [compression({ threshold: 1024, compressStream: false })],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 
@@ -325,18 +302,16 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`Should't compress response if x-no-compression header is present`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [
           compression({ disableByHeader: true, compressStream: false }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req({ 'x-no-compression': 'true' }))
 
@@ -346,16 +321,14 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`When not compress response send original response`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [compression({ threshold: 1024, compressStream: false })],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
     const test = await res.text()
@@ -367,17 +340,14 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`When not compress response should send original content-type`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(async () => {
-          return {
-            data: jsonResponse,
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8',
-            },
-          }
+        handler: async () => new Response(jsonResponse, {
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8',
+          },
         }),
         middleware: [
           compression({
@@ -385,8 +355,8 @@ describe(`@vafast/compress`, () => {
             compressStream: false,
           }),
         ],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
     const test = await res.text()
@@ -401,16 +371,14 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`Should'nt compress response if browser not support any compression algorithm`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [compression({ threshold: 1024, compressStream: false })],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req({ 'accept-encoding': '*' }))
 
@@ -420,16 +388,14 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`Should return data from cache`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return responseShort
-        }),
+        handler: () => responseShort,
         middleware: [compression({ threshold: 0, compressStream: false })],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
     const test = zlib
@@ -454,21 +420,19 @@ describe(`@vafast/compress`, () => {
   })
 
   it(`Don't append vary header if values are *`, async () => {
-    const routes: Route[] = [
-      {
+    const routes = defineRoutes([
+      defineRoute({
         method: 'GET',
         path: '/',
-        handler: createHandler(() => {
-          return {
-            data: responseShort,
-            headers: {
-              Vary: 'location, header',
-            },
-          }
+        handler: () => ({
+          data: responseShort,
+          headers: {
+            Vary: 'location, header',
+          },
         }),
         middleware: [compression({ threshold: 0, compressStream: false })],
-      },
-    ]
+      })
+    ])
     const server = new Server(routes)
     const res = await server.fetch(req())
 

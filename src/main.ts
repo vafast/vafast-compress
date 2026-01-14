@@ -1,4 +1,4 @@
-import type { Middleware } from 'vafast'
+import { defineMiddleware } from 'vafast'
 import type {
   CacheOptions,
   CompressionEncoding,
@@ -35,7 +35,7 @@ import cacheStore from './cache'
  */
 export const compression = (
   options?: CompressionOptions & LifeCycleOptions & CacheOptions,
-): Middleware => {
+) => {
   const zlibOptions: ZlibOptions = {
     ...{
       level: 6,
@@ -95,10 +95,7 @@ export const compression = (
    * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
    * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
    */
-  return async (
-    req: Request,
-    next: () => Promise<Response>,
-  ): Promise<Response> => {
+  return defineMiddleware<object>(async (req, next) => {
     // Disable compression when `x-no-compression` header is set
     if (disableByHeader && req.headers.get('x-no-compression')) {
       return next()
@@ -202,5 +199,5 @@ export const compression = (
       statusText: response.statusText,
       headers,
     })
-  }
+  })
 }
