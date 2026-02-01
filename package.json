@@ -1,6 +1,6 @@
 {
   "name": "@vafast/compress",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": {
     "name": "Ashary Vermaysha",
     "email": "vermaysha@gmail.com",
@@ -18,7 +18,7 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "typescript": "^5.8.3"
+    "vafast": "<2.0.0"
   },
   "exports": {
     ".": {
@@ -52,8 +52,5 @@
     "release": "npm run build && npm run test && npx bumpp && npm publish --access=public"
   },
   "types": "./dist/index.d.ts",
-  "url": "https://github.com/vermaysha/@vafast/compress",
-  "dependencies": {
-    "vafast": "^0.5.1"
-  }
+  "url": "https://github.com/vermaysha/@vafast/compress"
 }
