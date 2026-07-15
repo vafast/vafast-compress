@@ -1,6 +1,6 @@
 {
   "name": "@vafast/compress",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "author": {
     "name": "Ashary Vermaysha",
     "email": "vermaysha@gmail.com",
@@ -10,7 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/vermaysha/@vafast/compress.git"
   },
-  "main": "./dist/index.mjs",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "devDependencies": {
     "@types/node": "^25.0.3",
     "rimraf": "^6.0.1",
@@ -23,10 +25,10 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "require": "./dist/cjs/index.js",
-      "default": "./dist/index.mjs"
+      "default": "./dist/index.js"
     }
   },
   "bugs": "https://github.com/vermaysha/@vafast/compress/issues",
@@ -53,6 +55,6 @@
     "release": "npm run build && npm run test && npx bumpp && npm publish --access=public",
     "prepublishOnly": "npm run build"
   },
-  "types": "./dist/index.d.mts",
+  "types": "./dist/index.d.ts",
   "url": "https://github.com/vermaysha/@vafast/compress"
 }
