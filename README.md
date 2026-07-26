@@ -1,147 +1,102 @@
-# @huyooo/elysia-compress
+# @vafast/compress
 
-[![CI Test](https://github.com/vermaysha/@huyooo/elysia-compress/actions/workflows/ci.yml/badge.svg)](https://github.com/vermaysha/@huyooo/elysia-compress/actions/workflows/ci.yml)
-[![NPM version](https://img.shields.io/npm/v/@huyooo/elysia-compress.svg?style=flat)](https://www.npmjs.com/package/@huyooo/elysia-compress)
-![Codacy coverage](https://img.shields.io/codacy/coverage/cac8faec654f452abf60133df31cf86d)
-![GitHub License](https://img.shields.io/github/license/vermaysha/@huyooo/elysia-compress?style=flat)
-![NPM Downloads](https://img.shields.io/npm/dy/@huyooo/elysia-compress?style=flat)
+Vafast 响应压缩中间件：根据客户端 `Accept-Encoding` 压缩响应体，支持 **Brotli / gzip / deflate**。
 
-Add compression to [Elysia Server](https://elysiajs.com/essential/handler.html#response). Supports `gzip`, `deflate`, and `brotli`.
+导出名是 **`compression`**（不是 `compress`）。
 
-**Note** Brotli Compression is only available and supported by Bun v1.1.8 or higher
+## 先搞清几个概念
 
-## Install
+- **协商**：用配置的 `encodings` 顺序与 `Accept-Encoding`（按 `, ` 拆分）求交，取第一个；无交集或不带头则不压缩。
+- **threshold**：缓冲响应小于该字节数（默认 1024）不压缩。
+- **level / quality**：`zlibOptions.level`（默认 6）控制 gzip/deflate；Brotli 用 `BROTLI_PARAM_QUALITY`（默认 Node 默认质量）。越高越省体积、越费 CPU。
+- **compressStream**：运行时默认 **`true`**（会压缩 `ReadableStream`）。类型文件 JSDoc 仍写 `@default false`，以运行为准。SSE 建议设 `false`。
 
+## 安装
+
+```bash
+npm install @vafast/compress
 ```
-npm install @huyooo/elysia-compress
-```
 
-## Usage
-
-This plugin provides a function to automatically compress every Response sent by Elysia Response.
-Especially on responses in the form of JSON Objects, Text and Stream (Server Sent Events).
-
-Currently, the following encoding tokens are supported, using the first acceptable token in this order:
-
-1. `br`
-2. `gzip`
-3. `deflate`
-
-If an unsupported encoding is received or if the `'accept-encoding'` header is missing, it will not compress the payload.
-
-The plugin automatically decides if a payload should be compressed based on its `content-type`; if no content type is present, it will assume `text/plain`. But if you send a response in the form of an Object then it will be detected automatically as `application/json`
-
-To improve performance, and given data compression is a resource-intensive operation, caching compressed responses can significantly reduce the load on your server. By setting an appropriate `TTL` (time to live, or how long you want your responses cached), you can ensure that frequently accessed data is served quickly without repeatedly compressing the same content. @huyooo/elysia-compress saves the data in-memory, so it's probably best if you set some sensible defaults (maybe even per-route or group) so as to not increase unnecessarily your memory usage
-
-### Global Hook
-
-The global compression hook is enabled by default. To disable it, pass the option `{ as: 'scoped' }` or `{ as: 'scoped' }` You can read in-depth about [Elysia Scope on this page](https://elysiajs.com/essential/scope.html)
+## 快速开始
 
 ```typescript
-import { Elysia } from '@huyooo/elysia'
-import { compression } from '@huyooo/elysia-compress'
+import { Server, defineRoute, defineRoutes, json, serve } from 'vafast'
+import { compression } from '@vafast/compress'
 
-const app = new Elysia()
-  .use(
-    compression({
-      as: 'scoped',
-    }),
-  )
-  .get('/', () => ({ hello: 'world' }))
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => json({ message: 'Hello '.repeat(200) }),
+  }),
+])
+
+const server = new Server(routes)
+server.use(compression())
+serve({ fetch: server.fetch, port: 3000 })
 ```
 
-## Compress Options
-
-### threshold
-
-The minimum byte size for a response to be compressed. Defaults to `1024`.
+## 用法
 
 ```typescript
-const app = new Elysia().use(
+// 只启用 gzip，提高阈值；关闭流压缩（适合 SSE）
+server.use(
   compression({
+    encodings: ['gzip', 'deflate'],
     threshold: 2048,
+    compressStream: false,
+    zlibOptions: { level: 6 },
+    TTL: 3600,
   }),
 )
 ```
 
-### Disable compression by header
+请求带 `x-no-compression` 且 `disableByHeader` 为默认 `true` 时跳过压缩。
 
-You can selectively disable response compression by using the `x-no-compression` header in the request.
-You can still disable this option by adding `disableByHeader: true` to options. Default to `false`
+## API
 
-```typescript
-const app = new Elysia().use(
-  compression({
-    disableByHeader: true,
-  }),
-)
-```
+### 导出
 
-### brotliOptions and zlibOptions
+| 导出 | 说明 |
+|------|------|
+| `compression` / `default` | 中间件工厂 |
+| `CompressionStream` | 流式压缩 Transform 封装 |
+| 相关类型 | `CompressionOptions`、`CompressionEncoding` 等 |
 
-You can tune compression by setting the `brotliOptions` and `zlibOptions` properties. These properties are passed directly to native node `zlib` methods, so they should match the corresponding [class](https://nodejs.org/api/zlib.html#zlib_class_brotlioptions) [definitions](https://nodejs.org/api/zlib.html#zlib_class_options).
+### 选项摘要
 
-```typescript
-const app = new Elysia().use(
-  compression({
-    brotliOptions: {
-      params: {
-        [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT, // useful for APIs that primarily return text
-        [zlib.constants.BROTLI_PARAM_QUALITY]: 4, // default is 4, max is 11, min is 0
-      },
-    },
-    zlibOptions: {
-      level: 6, // default is typically 6, max is 9, min is 0
-    },
-  }),
-)
-```
+| 选项 | 默认 | 说明 |
+|------|------|------|
+| `encodings` | `['br', 'gzip', 'deflate']` | 与 `Accept-Encoding` 求交后取第一个 |
+| `threshold` | `1024` | 小于该字节数不压缩（缓冲路径） |
+| `disableByHeader` | `true` | 请求带 `x-no-compression` 则跳过 |
+| `compressStream` | **运行时 `true`** | 是否压缩 `ReadableStream`；SSE 建议 `false` |
+| `brotliOptions` / `zlibOptions` | 内置 | 传给 Node `zlib` |
+| `TTL` | `86400` | 压缩结果内存缓存秒数（非流式） |
+| `as` | `'after'` | 类型保留，**当前未使用** |
 
-### Customize encoding priority
+仅压缩 `response.ok`（200–299）的响应。
 
-By default, `@huyooo/elysia-compress` prioritizes compression as described [Usage](#usage). You can change that by passing an array of compression tokens to the `encodings` option:
+## 最佳实践
 
-```typescript
-const app = new Elysia().use(
-  compression({
-    // Only support gzip and deflate, and prefer deflate to gzip
-    encodings: ['deflate', 'gzip'],
-  }),
-)
-```
+1. JSON / HTML 全局开启；SSE 设 `compressStream: false`
+2. 用 `threshold` 跳过过小响应
+3. CPU 紧张时可降低 Brotli quality 或只用 gzip
+4. 注意 `TTL` 进程内缓存的内存占用
 
-### Cache TTL
+## 注意事项
 
-You can specify a time-to-live (TTL) for the cache entries to define how long the compressed responses should be cached. The TTL is specified in seconds and defaults to `86400` (24 hours)
+- `Accept-Encoding` 按 `, ` 拆分，不做 `q` 权重解析
+- 缓冲路径会检查可压缩 Content-Type；无 Content-Type 视为可压
+- 流式路径不检查 threshold / Content-Type 正则
+- 依赖 Node `zlib` / `crypto`
 
-```typescript
-const app = new Elysia().use(
-  compression({
-    TTL: 3600, // Cache TTL of 1 hour
-  }),
-)
-```
+## 相关链接
 
-This allows you to control how long the cached compressed responses are stored, helping to balance between performance and memory usage
-
-### Cache Server-Sent-Events
-
-By default, `@huyooo/elysia-compress` will not compress responses in Server-Sent Events. If you want to enable compression in Server-Sent Events, you can set the `compressStream` option to `true`.
-
-```typescript
-const app = new Elysia().use(
-  compression({
-    compressStream: true,
-  }),
-)
-```
-
-## Contributors
-
-<a href="https://github.com/vermaysha/@huyooo/elysia-compress/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=vermaysha/@huyooo/elysia-compress" />
-</a>
+- 完整文档：[Compress 中间件](https://vafast.huyooo.com/middleware/compress.html)（仓库内 `vafast-doc/docs/middleware/compress.md`）
+- [MDN: Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding)
+- [Node.js zlib](https://nodejs.org/api/zlib.html)
 
 ## License
 
-This plugins is licensed under the [MIT License](LICENSE).
+MIT

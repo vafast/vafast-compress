@@ -6,12 +6,12 @@ import type {
   LifeCycleOptions,
 } from './types'
 import {
-  BrotliOptions,
-  ZlibOptions,
   constants,
   brotliCompressSync,
   gzipSync,
   deflateSync,
+  type BrotliOptions,
+  type ZlibOptions,
 } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import { CompressionStream } from './compression-stream'
